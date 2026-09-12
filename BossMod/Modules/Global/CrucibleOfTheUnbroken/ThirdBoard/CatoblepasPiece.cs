@@ -60,6 +60,8 @@ sealed class DemonicEye(BossModule module) : Components.Voidzone(module, 2f, Get
         return voidzones[..index];
     }
 }
+sealed class DemonicEyeCircle(BossModule module) : Components.Voidzone(module, 2f, module => module.Enemies((uint)OID.DemonicEyeCircle).Where(z => z.Renderflags == 0), 2f);
+sealed class DemonicEyeDonut(BossModule module) : Components.Voidzone(module, 2f, module => module.Enemies((uint)OID.DemonicEyeDonut).Where(z => z.Renderflags == 0), 2f);
 sealed class NearFarburst(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = [];
@@ -153,9 +155,9 @@ sealed class CatoblepasPieceStates : StateMachineBuilder
     {
         TrivialPhase()
             .ActivateOnEnter<BestialRoar>()
-            //.ActivateOnEnter<Nearburst>()
-            //.ActivateOnEnter<Farburst>()
-            .ActivateOnEnter<DemonicEye>()
+            //.ActivateOnEnter<DemonicEye>()
+            .ActivateOnEnter<DemonicEyeCircle>()
+            .ActivateOnEnter<DemonicEyeDonut>()
             .ActivateOnEnter<NearFarburst>()
             .ActivateOnEnter<FalseDemonEye>()
             .ActivateOnEnter<SinisterGleam>();
