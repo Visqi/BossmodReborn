@@ -50,7 +50,42 @@ sealed class SuccubusKnightAdd(BossModule module) : Components.Adds(module, (uin
 sealed class VoidFireII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidFireII, 10f);
 
 //HeartShatter1 = 46938, // 233C->self, 1.0s cast, range 24 circle
-sealed class HeartShatter(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HeartShatter1, 24f);
+sealed class HeartShatter(BossModule module) : Components.GenericAOEs(module)
+{
+    private readonly List<AOEInstance> _aoes = [];
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoes.Count == 0 ? [] : CollectionsMarshal.AsSpan(_aoes);
+    private readonly List<Actor> _orbs = [];
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.HeartShatter)
+        {
+            _aoes.Clear();
+        }
+    }
+
+    public override void OnActorCreated(Actor actor)
+    {
+        if (actor.OID == (uint)OID.Pheromone)
+        {
+            _orbs.Add(actor);
+
+            // tether may come out before both actors are created
+            if (_orbs.Count == 2)
+            {
+                var pos1 = _orbs[0].Position;
+                var pos2 = _orbs[1].Position;
+                var length = (pos2 - pos1).Length();
+                var direction = (pos2 - pos1).Normalized();
+                var estimated = pos1 + direction * (length / 2f);
+                var activation = WorldState.FutureTime(13.5d);
+
+                _aoes.Add(new(new AOEShapeCircle(24f), estimated, default, activation));
+                _orbs.Clear();
+            }
+        }
+    }
+}
 //SweetSteel = 46930, // SuccubusKnight->self, 6.0s cast, range 10 120.000-degree cone
 sealed class SweetSteel(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SweetSteel, new AOEShapeCone(10f, 60f.Degrees()));
 

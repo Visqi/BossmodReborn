@@ -145,6 +145,49 @@ sealed class Landslip(BossModule module) : Components.SimpleKnockbacks(module, (
             }
         }
     }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (Casters.Count != 0)
+        {
+            var knockbacks = ActiveKnockbacks(slot, actor);
+            ref readonly var kb1 = ref Casters.Ref(0);
+            var activation = kb1.Activation;
+
+            if (IsImmune(slot, activation))
+            {
+                return;
+            }
+
+            var count = knockbacks.Length;
+            Knockback? knockback = null;
+
+            for (var i = 0; i < count; ++i)
+            {
+                ref readonly var kb = ref knockbacks[i];
+
+                if (kb.Shape!.Check(actor.Position, kb.Origin, kb.Direction))
+                {
+                    knockback = kb;
+                }
+                else
+                {
+                    hints.AddForbiddenZone(kb.Shape, kb.Origin, kb.Direction, kb.Activation, kb.ActorID, kb.ArenaProjectionLayer);
+                }
+            }
+
+            if (knockback == null || rockslide == null)
+            {
+                return;
+            }
+
+            var direction = knockback.Value.Direction.ToDirection() * 20f;
+            var aoes = rockslide.ActiveAOEs(slot, actor).ToArray();
+            var aoecount = aoes.Length;
+            ShapeDistance sd = aoecount == 0 ? new SDKnockbackInAABBSquareFixedDirection(Arena.Center, direction, 20f) : new SDKnockbackInAABBSquareFixedDirectionPlusMixedAOEs(Arena.Center, direction, 20f, aoes, aoecount);
+            hints.AddForbiddenZone(sd, activation, knockback.Value.ActorID);
+        }
+    }
 }
 
 sealed class LakhamuPieceStates : StateMachineBuilder {
@@ -159,7 +202,7 @@ sealed class LakhamuPieceStates : StateMachineBuilder {
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.LakhamuPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14580u, SortOrder = 13)]
+[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.LakhamuPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14580u, SortOrder = 5)]
 public sealed class LakhamuPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsRect(20f, 20f)) {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
         var count = hints.PotentialTargets.Count;
