@@ -1,138 +1,127 @@
-﻿namespace BossMod.Global.CrucibleOfTheUnbroken.ThirdBoard.CavalierPiece;
+﻿namespace BossMod.Global.CrucibleOfTheUnbroken.ThirdBoard.YmirPiece;
+
+// TODO when adding AI to this module - if we want to drag the snail around the map, we have to be like 8.0f away from it, since it has a cleave auto-attack
+//  this cleave only hits one person tho, its just so its hard to move the boss around
 
 public enum OID : uint
 {
-    CavalierPiece = 0x4C8E,
+    YmirPiece = 0x4C93,
     Helper = 0x233C,
-    BoneBishop = 0x4C90, // R0.750, x0 (spawn during fight)
-    BoneFragmentOrb = 0x4C92, // R1.000, x0 (spawn during fight)
-    FeintedCavalierPiece = 0x4C8F, // R2.520, x5
+    SahaginPiece = 0x4C95, // R2.000, x1
+    YmirShell = 0x4C94, // R2.000, x1, Part type
 }
 
 public enum AID : uint
 {
-    AutoAttack = 49680, // CavalierPiece->player, no cast, single-target
-    AutoAttackBlizzard = 48621, // 4C90->player, no cast, single-target
-    SteelripperBoss = 48472, // CavalierPiece->self, 6.0+1.0s cast, single-target
-    Steelripper = 48473, // Helper->self, 7.0s cast, range 60 130.000-degree cone
-    Doubling = 48460, // CavalierPiece->self, 5.0s cast, single-target
-    MenaceActor = 48463, // 4C8F->self, 5.4+0.6s cast, single-target
-    Menace = 48464, // Helper->self, 6.0s cast, range 20 circle
-    ValfodrActor = 48461, // 4C8F->self, 5.6+0.4s cast, single-target
-    Valfodr = 48462, // Helper->self, 6.0s cast, range 60 width 8 rect
-    CrushingBlade = 48471, // CavalierPiece->player, 5.0s cast, single-target
-    FeintedCavalierTeleport = 50552, // 4C8F->CavalierPiece, no cast, single-target
+    // Sahagin
+    AutoAttackWater = 48626, // 4C95->player, no cast, single-target
+    SahaginTeleport = 48484, // SahaginPiece->location, no cast, single-target
+    WaterIIBoss = 48482, // 4C95->self, 3.0s cast, single-target
+    WaterII = 48483, // Helper->location, 3.0s cast, range 6 circle
+    TsunamiBoss = 48480, // 4C95->self, 8.0s cast, single-target
+    Tsunami = 48481, // Helper->self, 8.0s cast, range 60 width 60 rect
+    ParalyzingSpikes = 50532, // 4C95->self, 3.0s cast, single-target
+    Dreadwash = 48485, // SahaginPiece->self, 8.0s cast, range 30 circle
 
-    Unknown1 = 50551, // 4C92->CavalierPiece, no cast, single-target - most likely the orb teleport
+    // Ymir
+    AutoAttackHeadSnatch = 48477, // YmirPiece->self, no cast, range 7 ?-degree cone
+    YmirTeleport = 48476, // YmirPiece->location, no cast, single-target
+    BlanketThunder = 48479, // YmirPiece->self, 5.0s cast, range 40 circle
 }
 
-public enum IconID : uint
+public enum SID : uint
 {
-    TankBusterKnockBack = 633, // CavalierPiece->player
+    VulnerabilityDown = 2198,
+    ParalyzingSpikes = 5434, // none->4C95, extra=0x64
 }
 
 public enum TetherID : uint
 {
-    DoublingTether = 398, // 4C92->CavalierPiece
+    ParalyzingSpikesTether = 6, // 4C95->YmirPiece
 }
 
-sealed class Steelripper(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Steelripper, new AOEShapeCone(60.0f, 65.0f.Degrees()));
+sealed class WaterII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WaterII, 6.0f);
+sealed class Tsunami(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Tsunami, 35.0f, kind: Kind.DirForward);
+sealed class BlanketThunder(BossModule module) : Components.RaidwideCast(module, (uint)AID.BlanketThunder);
+sealed class Dreadwash(BossModule module) : Components.CastInterruptHint(module, (uint)AID.Dreadwash);
 
-sealed class MenaceValfodr(BossModule module) : Components.GenericAOEs(module) {
-    private readonly List<AOEInstance> aoes = [];
-    private readonly AOEShapeCircle circle = new(20.0f);
-    private readonly AOEShapeRect rectangle = new(60.0f, 4.0f);
-
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.FeintedCavalierTeleport) {
-            if (caster.Position.InRect(Arena.Center, 20.0f, 20.0f)) {
-                aoes.Add(new(circle, caster.Position, caster.Rotation, WorldState.FutureTime(12.3f)));
-            }
-
-            if (!caster.Position.InRect(Arena.Center, 20.0f, 20.0f)) {
-                // Actors can spawn at angles, but will always look forward where ever they spawn, so we just correct it here
-                var angleCorrection = (MathF.Round(caster.Rotation.Deg / 90.0f) * 90.0f).Degrees();
-                if (angleCorrection.ToDirection().Dot(caster.Position - Arena.Center) > 0) {
-                    angleCorrection = angleCorrection + 180.0f.Degrees();
-                }
-
-                aoes.Add(new(rectangle, caster.Position, angleCorrection, WorldState.FutureTime(11.7f)));
-            }
-        }
-
-        if (spell.Action.ID == (uint)AID.Menace || spell.Action.ID == (uint)AID.Valfodr) {
-            if (aoes.Count > 0) {
-                aoes.RemoveAt(0);
-            }
-        }
-    }
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(aoes);
-}
-
-sealed class CrushingBlade(BossModule module) : Components.GenericKnockback(module)
+sealed class ParalyzingSpikes(BossModule module) : Components.GenericInvincible(module, "Attacking boss with spikes debuff!")
 {
-    private const float KnockbackDistance = 15.0f;
-    private BitMask affectedPlayers;
-    private DateTime activation = default;
-    private Actor? source = null;
-
-    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
-    {
-        if (iconID == (uint)IconID.TankBusterKnockBack && Raid.FindSlot(targetID) is var slot && slot >= 0)
-        {
-            affectedPlayers[slot] = true;
-        }
-    }
+    private readonly List<Actor> avoidBosses = [];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.CrushingBlade)
+        if (spell.Action.ID == (uint)AID.ParalyzingSpikes)
         {
-            activation = Module.CastFinishAt(spell);
-            source = caster;
+            avoidBosses.Add(caster);
         }
     }
 
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
     {
-        if (spell.Action.ID == (uint)AID.CrushingBlade)
+        if (status.ID == (uint)SID.ParalyzingSpikes)
         {
-            affectedPlayers.Reset();
+            avoidBosses.Remove(actor);
         }
     }
 
-    public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
-    {
-        if (affectedPlayers[slot] && activation != default && source != null)
-        {
-            return new Knockback[1] { new(source.Position, KnockbackDistance, activation) };
-        }
-
-        return [];
-    }
+    protected override ReadOnlySpan<Actor> ForbiddenTargets(int slot, Actor actor) => CollectionsMarshal.AsSpan(avoidBosses);
 }
 
-sealed class CavalierPieceStates : StateMachineBuilder
+sealed class VulnDown(BossModule module) : Components.GenericInvincible(module)
 {
-    public CavalierPieceStates(BossModule module) : base(module)
+    private readonly List<Actor> avoidBosses = [];
+
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.VulnerabilityDown)
+        {
+            avoidBosses.Add(actor);
+        }
+    }
+
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.VulnerabilityDown)
+        {
+            avoidBosses.Remove(actor);
+        }
+    }
+
+    protected override ReadOnlySpan<Actor> ForbiddenTargets(int slot, Actor actor) => CollectionsMarshal.AsSpan(avoidBosses);
+}
+
+sealed class YmirPieceStates : StateMachineBuilder
+{
+    public YmirPieceStates(BossModule module) : base(module)
     {
         TrivialPhase()
-            .ActivateOnEnter<Steelripper>()
-            .ActivateOnEnter<MenaceValfodr>()
-            .ActivateOnEnter<CrushingBlade>();
+            .ActivateOnEnter<WaterII>()
+            .ActivateOnEnter<Tsunami>()
+            .ActivateOnEnter<BlanketThunder>()
+            .ActivateOnEnter<ParalyzingSpikes>()
+            .ActivateOnEnter<VulnDown>()
+            .ActivateOnEnter<Dreadwash>()
+            .Raw.Update = () => AllDeadOrDestroyed(YmirPiece.Bosses);
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.CavalierPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14564u, SortOrder = 1)]
-public sealed class CavalierPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f)) {
-    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.YmirPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14569u, SortOrder = 1)]
+public sealed class YmirPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f))
+{
+    public static readonly uint[] Bosses = [(uint)OID.YmirPiece, (uint)OID.SahaginPiece];
+
+    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = hints.PotentialTargets.Count;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var e = hints.PotentialTargets[i];
-            e.Priority = e.Actor.OID switch {
-                (uint)OID.BoneBishop => 2,
-                (uint)OID.CavalierPiece => 1,
+            e.Priority = e.Actor.OID switch
+            {
+                (uint)OID.YmirShell => 3,
+                (uint)OID.YmirPiece => 2,
+                (uint)OID.SahaginPiece => 1,
                 _ => 0
             };
         }
@@ -140,13 +129,13 @@ public sealed class CavalierPiece(WorldState ws, Actor primary) : BossModule(ws,
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
-        Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.BoneBishop));
+        Arena.Actors(this, Bosses);
     }
 
     private readonly string[] _prePullHints =
     [
-        "This fight is easy if you kill every pack wave together and before the 4th pack spawn otherwise it starts getting complicated."
+        "This fight is easy, break shell, kill the snail then kill the 2nd boss.",
+        "Interrupt the Dreadwash spell or use your pet to take the damage down."
     ];
 
     public override string[] PrePullHints => _prePullHints;

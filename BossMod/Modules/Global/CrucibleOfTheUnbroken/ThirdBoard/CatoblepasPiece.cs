@@ -39,27 +39,85 @@ public enum TetherID : uint
 }
 sealed class BestialRoar(BossModule module) : Components.RaidwideCast(module, (uint)AID.BestialRoar);
 sealed class SinisterGleam(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SinisterGleam, new AOEShapeCone(60f, 90f.Degrees()));
-sealed class DemonicEye(BossModule module) : Components.Voidzone(module, 2f, GetEyes, 2f)
+/*
+sealed class Nearburst(BossModule module) : Components.GenericAOEs(module)
 {
-    private static Actor[] GetEyes(BossModule module)
-    {
-        var eyes = module.Enemies((uint)OID.DemonicEyeCircle);
-        eyes.AddRange(module.Enemies((uint)OID.DemonicEyeDonut));
-        var count = eyes.Count;
-        if (count == 0)
-            return [];
+    private readonly List<AOEInstance> _aoes = [];
+    private readonly List<DemonicEye> _eyes = [];
+    private readonly AOEShapeCircle _circle = new(25f);
 
-        var voidzones = new Actor[count];
-        var index = 0;
-        for (var i = 0; i < count; ++i)
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        if (_aoes.Count == 0)
         {
-            var z = eyes[i];
-            if (z.Renderflags == 0)
-                voidzones[index++] = z;
+            return [];
         }
-        return voidzones[..index];
+
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        var count = aoes.Length;
+        var max = count > 1 ? 1 : count;
+        return aoes[..max];
+    }
+
+    public override void OnActorCreated(Actor actor)
+    {
+        if (actor.OID == (uint)OID.DemonicEyeCircle)
+        {
+            var position = actor.Position;
+            _eyes.Add(new(actor, position));
+        }
+    }
+
+    public override void Update()
+    {
+        // all eyes are spawned before 1st one starts moving
+        var count = _eyes.Count;
+        for (var i = 0; i < count; i++)
+        {
+            var eye = _eyes[i];
+            var start = eye.StartPosition;
+            var cur = eye.Actor.Position;
+
+            if (start.AlmostEqual(cur, 0.5f))
+            {
+                continue;
+            }
+
+            var startrot = (start - Arena.Center).ToAngle();
+            var currot = (cur - Arena.Center).ToAngle();
+            var ccw = startrot.DistanceToAngle(currot).Deg > 0f;
+
+            var cardIntercard = Angle.AnglesCardinals.Concat(Angle.AnglesIntercardinals).ToArray();
+            for (var j = 0; j < 8; j++)
+            {
+                var angle = cardIntercard[j];
+                if (startrot.AlmostEqual(angle, 20f.Degrees().Rad))
+                {
+                    var finalPos = Arena.Center + (angle + 135f.Degrees() * (ccw ? 1f : -1f)).ToDirection() * 20f;
+                    _aoes.Add(new(_circle, finalPos));
+                    _eyes.RemoveAt(i);
+                    return;
+                }
+            }
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (_aoes.Count != 0 && spell.Action.ID == (uint)AID.Nearburst1)
+        {
+            _aoes.RemoveAt(0);
+        }
+    }
+
+    private class DemonicEye(Actor actor, WPos startPos)
+    {
+        public Actor Actor = actor;
+        public WPos StartPosition = startPos;
     }
 }
+*/
+
 sealed class NearFarburst(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = [];
@@ -105,7 +163,7 @@ sealed class NearFarburst(BossModule module) : Components.GenericAOEs(module)
                 continue;
             }
 
-            var activation = WorldState.CurrentTime.AddSeconds(19d);
+            var activation = WorldState.FutureTime().AddSeconds(19d);
             var startrot = (start - Arena.Center).ToAngle();
             var currot = (cur - Arena.Center).ToAngle();
             var ccw = startrot.DistanceToAngle(currot).Deg > 0f;
@@ -155,7 +213,6 @@ sealed class CatoblepasPieceStates : StateMachineBuilder
             .ActivateOnEnter<BestialRoar>()
             //.ActivateOnEnter<Nearburst>()
             //.ActivateOnEnter<Farburst>()
-            .ActivateOnEnter<DemonicEye>()
             .ActivateOnEnter<NearFarburst>()
             .ActivateOnEnter<FalseDemonEye>()
             .ActivateOnEnter<SinisterGleam>();
