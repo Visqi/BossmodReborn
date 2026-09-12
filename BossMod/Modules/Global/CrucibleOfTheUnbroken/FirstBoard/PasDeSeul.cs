@@ -25,7 +25,7 @@ public enum AID : uint
     Fanaticism = 46928, // SuccubusMage->PasDeSeul, 9.0s cast, single-target : Gives target Damage Up buff.
     VoidFireII = 46929, // SuccubusMage->location, 6.0s cast, range 10 circle
     BloodRain2 = 46923, // PasDeSeul->self, 5.0+1.0s cast, single-target
-    BloodRainDonut= 46924, // 233C->self, 6.0s cast, range 8-40 donut
+    BloodRainDonut = 46924, // 233C->self, 6.0s cast, range 8-40 donut
     BloodSword = 46934, // PasDeSeul->player, 6.0s cast, single-target : Heals Caster on hit. Interrupt if possible.
     Lifeblood = 49508, // 233C->PasDeSeul, no cast, single-target
     BeguilingMist = 46936, // PasDeSeul->self, 5.0s cast, range 30 circle
@@ -34,14 +34,12 @@ public enum AID : uint
     SweetSteel = 46930, // SuccubusKnight->self, 6.0s cast, range 10 120.000-degree cone
 }
 
-
 sealed class BloodRainCircle(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BloodRainCircle, 8f);
 sealed class BloodRainDonut(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BloodRainDonut, new AOEShapeDonut(8f, 40f));
 
 sealed class VoidAeroIIRect(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidAeroII, new AOEShapeRect(60f, 4f));
 
-sealed class VoidAeroIICone(BossModule module)
-    : Components.SimpleAOEs(module, (uint)AID.VoidAeroII1, new AOEShapeCone(60f, 10f.Degrees()));
+sealed class VoidAeroIICone(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidAeroII1, new AOEShapeCone(60f, 10f.Degrees()));
 
 //Prioritizing mage add higher than the knight. Mage Gives Damage up buffs to boss.
 sealed class SuccubusMageAdd(BossModule module) : Components.Adds(module, (uint)OID.SuccubusMage, 2);
@@ -50,7 +48,42 @@ sealed class SuccubusKnightAdd(BossModule module) : Components.Adds(module, (uin
 sealed class VoidFireII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidFireII, 10f);
 
 //HeartShatter1 = 46938, // 233C->self, 1.0s cast, range 24 circle
-sealed class HeartShatter(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HeartShatter1, 24f);
+sealed class HeartShatter(BossModule module) : Components.GenericAOEs(module)
+{
+    private readonly List<AOEInstance> _aoes = [];
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoes.Count == 0 ? [] : CollectionsMarshal.AsSpan(_aoes);
+    private readonly List<Actor> _orbs = [];
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.HeartShatter)
+        {
+            _aoes.Clear();
+        }
+    }
+
+    public override void OnActorCreated(Actor actor)
+    {
+        if (actor.OID == (uint)OID.Pheromone)
+        {
+            _orbs.Add(actor);
+
+            // tether may come out before both actors are created
+            if (_orbs.Count == 2)
+            {
+                var pos1 = _orbs[0].Position;
+                var pos2 = _orbs[1].Position;
+                var length = (pos2 - pos1).Length();
+                var direction = (pos2 - pos1).Normalized();
+                var estimated = pos1 + direction * (length / 2f);
+                var activation = WorldState.FutureTime(13.5d);
+
+                _aoes.Add(new(new AOEShapeCircle(24f), estimated, default, activation));
+                _orbs.Clear();
+            }
+        }
+    }
+}
 //SweetSteel = 46930, // SuccubusKnight->self, 6.0s cast, range 10 120.000-degree cone
 sealed class SweetSteel(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SweetSteel, new AOEShapeCone(10f, 60f.Degrees()));
 
@@ -79,8 +112,6 @@ sealed class PasDeSeulStates : StateMachineBuilder
     GroupID = 1088u,
     NameID = 14541u,
     SortOrder = 1)]
-
-
 public sealed class PasDeSeul : BossModule
 {
     public PasDeSeul(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }

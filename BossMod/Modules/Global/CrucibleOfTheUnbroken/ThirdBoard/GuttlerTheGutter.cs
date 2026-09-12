@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Global.CrucibleOfTheUnbroken.ThirdBoard.GuttlerTheGutter;
 
-public enum OID : uint {
+public enum OID : uint
+{
     GuttlerTheGutter = 0x4CAA,
     Helper = 0x233C,
     CombustingBlade = 0x4CAB, // R1.000, x6
@@ -10,7 +11,8 @@ public enum OID : uint {
     MoltenBlade = 0x4CAC, // R1.000, x0 (spawn during fight)
 }
 
-public enum AID : uint {
+public enum AID : uint
+{
     AutoAttack = 49714, // GuttlerTheGutter->players, no cast, range 9 ?-degree cone
     AutoAttackThanatos = 870, // _Gen_ThanatosPiece->player, no cast, single-target
     Teleport = 48590, // GuttlerTheGutter->location, no cast, single-target
@@ -49,7 +51,8 @@ public enum AID : uint {
     Unknown = 48610, // Helper->self, no cast, range 100 circle
 }
 
-public enum SID : uint {
+public enum SID : uint
+{
     Gen = 2552, // none->GuttlerTheGutter, extra=0x478/0x483/0x482/0x477
     Bind = 3625, // Helper->player, extra=0x0
     Fetters = 1614, // none->player, extra=0xEC4
@@ -57,12 +60,14 @@ public enum SID : uint {
     Paralysis = 5388, // GuttlerTheGutter->player, extra=0x0
 }
 
-public enum IconID : uint {
+public enum IconID : uint
+{
     ThunderboltTankBuster = 471, // player->self
     MoltenMetal = 669, // player->self
 }
 
-public enum TetherID : uint {
+public enum TetherID : uint
+{
     OverpoweringPointTether = 1, // GuttlerTheGutter->player
 }
 
@@ -79,14 +84,17 @@ sealed class MoltenMetalBaitAOE(BossModule module) : Components.SimpleAOEs(modul
 sealed class BeastlyFlare(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BeastlyFlare, 35.0f);
 sealed class GluttonousGutting(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GluttonousGutting, new AOEShapeRect(50.0f, 20.0f));
 
-sealed class BeastlyAura(BossModule module) : Components.GenericKnockback(module) {
+sealed class BeastlyAura(BossModule module) : Components.GenericKnockback(module)
+{
     private readonly List<Knockback> knockbacks = [];
     private static readonly AOEShapeRect shape = new(80.0f, 40.0f);
     private ShapeDistance distance;
     private const float knockbackDistance = 20.0f;
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.BeastlyAura) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.BeastlyAura)
+        {
             var act = Module.CastFinishAt(spell);
             var pos = Arena.Center;
             var rot = spell.Rotation;
@@ -99,9 +107,12 @@ sealed class BeastlyAura(BossModule module) : Components.GenericKnockback(module
         }
     }
 
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.BeastlyAura) {
-            if (knockbacks.Count > 0) {
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.BeastlyAura)
+        {
+            if (knockbacks.Count > 0)
+            {
                 knockbacks.Clear();
             }
         }
@@ -110,27 +121,35 @@ sealed class BeastlyAura(BossModule module) : Components.GenericKnockback(module
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => CollectionsMarshal.AsSpan(knockbacks);
 }
 
-sealed class MagicalCombustion : Components.SimpleAOEs {
-    public MagicalCombustion(BossModule module) : base(module, (uint)AID.MagicalCombustion, 8.0f) {
+sealed class MagicalCombustion : Components.SimpleAOEs
+{
+    public MagicalCombustion(BossModule module) : base(module, (uint)AID.MagicalCombustion, 8.0f)
+    {
         Color = Colors.Danger;
     }
 }
 
-sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module) {
+sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly List<AOEInstance> aoes = [];
     private readonly AOEShapeCross shape = new(15.0f, 5.0f);
     private readonly AOEShapeRect rect = new(5.0f, 5.0f, 5.0f);
 
-    public override void OnActorCreated(Actor actor) {
-        if (actor.OID == (uint)OID.DeadlyDemesne) {
+    public override void OnActorCreated(Actor actor)
+    {
+        if (actor.OID == (uint)OID.DeadlyDemesne)
+        {
             aoes.Add(new(shape, actor.Position, actor.Rotation, WorldState.FutureTime(12.7f)));
             aoes.Add(new(rect, actor.Position, actor.Rotation, color: Colors.Danger));
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.LifeClaim) {
-            if (aoes.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.LifeClaim)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.RemoveRange(0, 2);
             }
         }
@@ -139,15 +158,20 @@ sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module) {
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(aoes);
 }
 
-sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6.0f), (uint)IconID.MoltenMetal, centerAtTarget: true) {
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.MoltenMetalBaitCircle) {
+sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6.0f), (uint)IconID.MoltenMetal, centerAtTarget: true)
+{
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.MoltenMetalBaitCircle)
+        {
             CurrentBaits.Clear();
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
-        if (CurrentBaits.Count == 0) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (CurrentBaits.Count == 0)
+        {
             return;
         }
 
@@ -155,30 +179,37 @@ sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module
     }
 }
 
-sealed class OverpoweringPoint(BossModule module) : Components.GenericAOEs(module) {
+sealed class OverpoweringPoint(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly List<AOEInstance> aoes = [];
     private readonly AOEShapeCone cone = new(40.0f, 65.0f.Degrees()); // Cones to prevent baiting towards the adds
     private readonly AOEShapeRect rect = new(60.0f, 3.0f); // Actual bait shape
     private readonly AOEShapeCircle circle = new(6.0f); // Circle under boss to prevent baiting under the boss
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.OverpoweringPoint) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.OverpoweringPoint)
+        {
             Service.Logger.Info("fake aoes added");
             aoes.Add(new(cone, Arena.Center, Angle.AnglesCardinals[0]));
             aoes.Add(new(cone, Arena.Center, Angle.AnglesCardinals[3]));
             aoes.Add(new(circle, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation));
         }
 
-        if (spell.Action.ID == (uint)AID.OverpoweringPoint2) {
+        if (spell.Action.ID == (uint)AID.OverpoweringPoint2)
+        {
             Service.Logger.Info("fake aoes cleared");
             aoes.Clear();
             aoes.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.OverpoweringPoint2) {
-            if (aoes.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.OverpoweringPoint2)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.Clear();
             }
         }
@@ -187,8 +218,10 @@ sealed class OverpoweringPoint(BossModule module) : Components.GenericAOEs(modul
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(aoes);
 }
 
-sealed class GuttlerTheGutterStates : StateMachineBuilder {
-    public GuttlerTheGutterStates(BossModule module) : base(module) {
+sealed class GuttlerTheGutterStates : StateMachineBuilder
+{
+    public GuttlerTheGutterStates(BossModule module) : base(module)
+    {
         TrivialPhase()
             .ActivateOnEnter<AutoAttack>()
             .ActivateOnEnter<Gyrocleave>()
@@ -205,13 +238,17 @@ sealed class GuttlerTheGutterStates : StateMachineBuilder {
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.GuttlerTheGutter, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14592u, SortOrder = 15)]
-public sealed class GuttlerTheGutter : BossModule {
-    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.GuttlerTheGutter, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14592u, SortOrder = 7)]
+public sealed class GuttlerTheGutter : BossModule
+{
+    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = hints.PotentialTargets.Count;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var e = hints.PotentialTargets[i];
-            e.Priority = e.Actor.OID switch {
+            e.Priority = e.Actor.OID switch
+            {
                 (uint)OID.ThanatosPiece => 2,
                 (uint)OID.GuttlerTheGutter => 1,
                 _ => 0
@@ -219,16 +256,18 @@ public sealed class GuttlerTheGutter : BossModule {
         }
     }
 
-    protected override void DrawEnemies(int pcSlot, Actor pc) {
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
         Arena.Actor(PrimaryActor);
         Arena.Actors(Enemies((uint)OID.ThanatosPiece));
     }
 
-    public GuttlerTheGutter(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) {}
+    public GuttlerTheGutter(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }
 
     private GuttlerTheGutter(WorldState ws, Actor primary, (WPos center, ArenaBoundsCustom arena) a) : base(ws, primary, a.center, a.arena) { }
 
-    public static (WPos center, ArenaBoundsCustom arena) BuildArena() {
+    public static (WPos center, ArenaBoundsCustom arena) BuildArena()
+    {
         var arena = new ArenaBoundsCustom([
             new Rectangle(new(520f, -420f), 10f, 20f), // Base map
             new Rectangle(new(520f, -397.5f), 2.5f, 2.5f), // Bottom of map

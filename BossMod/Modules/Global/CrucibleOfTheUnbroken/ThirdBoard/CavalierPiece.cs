@@ -38,21 +38,27 @@ public enum TetherID : uint
 
 sealed class Steelripper(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Steelripper, new AOEShapeCone(60.0f, 65.0f.Degrees()));
 
-sealed class MenaceValfodr(BossModule module) : Components.GenericAOEs(module) {
+sealed class MenaceValfodr(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly List<AOEInstance> aoes = [];
     private readonly AOEShapeCircle circle = new(20.0f);
     private readonly AOEShapeRect rectangle = new(60.0f, 4.0f);
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.FeintedCavalierTeleport) {
-            if (caster.Position.InRect(Arena.Center, 20.0f, 20.0f)) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.FeintedCavalierTeleport)
+        {
+            if (caster.Position.InRect(Arena.Center, 20.0f, 20.0f))
+            {
                 aoes.Add(new(circle, caster.Position, caster.Rotation, WorldState.FutureTime(12.3f)));
             }
 
-            if (!caster.Position.InRect(Arena.Center, 20.0f, 20.0f)) {
+            if (!caster.Position.InRect(Arena.Center, 20.0f, 20.0f))
+            {
                 // Actors can spawn at angles, but will always look forward where ever they spawn, so we just correct it here
                 var angleCorrection = (MathF.Round(caster.Rotation.Deg / 90.0f) * 90.0f).Degrees();
-                if (angleCorrection.ToDirection().Dot(caster.Position - Arena.Center) > 0) {
+                if (angleCorrection.ToDirection().Dot(caster.Position - Arena.Center) > 0)
+                {
                     angleCorrection = angleCorrection + 180.0f.Degrees();
                 }
 
@@ -60,8 +66,10 @@ sealed class MenaceValfodr(BossModule module) : Components.GenericAOEs(module) {
             }
         }
 
-        if (spell.Action.ID == (uint)AID.Menace || spell.Action.ID == (uint)AID.Valfodr) {
-            if (aoes.Count > 0) {
+        if (spell.Action.ID == (uint)AID.Menace || spell.Action.ID == (uint)AID.Valfodr)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.RemoveAt(0);
             }
         }
@@ -124,13 +132,17 @@ sealed class CavalierPieceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.CavalierPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14564u, SortOrder = 2)]
-public sealed class CavalierPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f)) {
-    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.CavalierPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14564u, SortOrder = 1)]
+public sealed class CavalierPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f))
+{
+    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = hints.PotentialTargets.Count;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var e = hints.PotentialTargets[i];
-            e.Priority = e.Actor.OID switch {
+            e.Priority = e.Actor.OID switch
+            {
                 (uint)OID.BoneBishop => 2,
                 (uint)OID.CavalierPiece => 1,
                 _ => 0
