@@ -106,7 +106,7 @@ sealed class YmirPieceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.YmirPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14569u, SortOrder = 3)]
+[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.YmirPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14569u, SortOrder = 2)]
 public sealed class YmirPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f))
 {
     public static readonly uint[] Bosses = [(uint)OID.YmirPiece, (uint)OID.SahaginPiece];
@@ -123,4 +123,19 @@ public sealed class YmirPiece(WorldState ws, Actor primary) : BossModule(ws, pri
     ];
 
     public override string[] PrePullHints => _prePullHints;
+
+    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        // prioritize shell over sahagin
+        var count = hints.PotentialTargets.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var e = hints.PotentialTargets[i];
+            if (e.Actor.OID == (uint)OID.YmirShell)
+            {
+                e.Priority = 1;
+                break;
+            }
+        }
+    }
 }
