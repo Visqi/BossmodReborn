@@ -141,7 +141,6 @@ class StartingPositions(BossModule module) : BossComponent(module)
                         5 => new WPos(-2.815f, 2.137f),
                         0x10 => new WPos(-1.511f, 4.501f),
                         0x18 => new WPos(0f, 5.020f),
-
                         _ => null
                     },
                 1014 => // NA03 React to Advanced Visual Indicators
